@@ -1,0 +1,80 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  firmName  String?  @map("firm_name")
+  createdAt DateTime @default(now()) @map("created_at")
+  lastLogin DateTime? @map("last_login")
+  
+  contracts Contract[]
+  invoices  Invoice[]
+  
+  @@map("users")
+}
+
+model Contract {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  documentUrl String   @map("document_url")
+  version     String   @default("1.0")
+  status      String   @default("pending") // pending, accepted
+  acceptedAt  DateTime? @map("accepted_at")
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("contracts")
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  invoiceNumber String   @unique @map("invoice_number")
+  amount        Float
+  documentUrl   String   @map("document_url")
+  status        String   @default("pending") // pending, paid
+  dueDate       DateTime @map("due_date")
+  createdAt     DateTime @default(now()) @map("created_at")
+  paidAt        DateTime? @map("paid_at")
+  
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments Payment[]
+  
+  @@map("invoices")
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  invoiceId       String   @map("invoice_id")
+  stripePaymentId String   @map("stripe_payment_id")
+  amount          Float
+  status          String   // succeeded, pending, failed
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  @@map("payments")
+}
+
+model MagicLink {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("magic_links")
+}
